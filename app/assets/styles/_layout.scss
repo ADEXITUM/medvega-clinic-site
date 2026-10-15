@@ -1,0 +1,136 @@
+@use 'mixins' as *;
+
+// Контейнер и сетки карточек: 1 колонка на телефоне, 2 на планшете, 3–4 на компьютере
+.container {
+  width: 100%;
+  max-width: calc(var(--container) + var(--gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: var(--sp-7);
+
+  @include up(lg) {
+    padding-block: var(--sp-8);
+  }
+
+  &--alt {
+    background: var(--c-surface);
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3) var(--sp-5);
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: var(--sp-5);
+  }
+
+  &__title {
+    font-size: var(--fs-xl);
+  }
+}
+
+.page {
+  padding-block: var(--sp-5) var(--sp-8);
+
+  &__title {
+    margin-bottom: var(--sp-4);
+  }
+
+  &__lead {
+    max-width: 60ch;
+    margin-bottom: var(--sp-6);
+  }
+}
+
+.grid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+
+  @include up(md) {
+    gap: var(--sp-5);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &--3 {
+    @include up(lg) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  &--4 {
+    @include up(lg) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    @include up(xl) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+}
+
+.stack > * + * {
+  margin-top: var(--sp-4);
+}
+
+.visually-hidden {
+  @include visually-hidden;
+}
+
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 0.125rem 0.625rem;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+  border-radius: var(--r-full);
+
+  &--warning {
+    color: #7a4a00;
+    background: var(--c-warning-soft);
+  }
+}
+
+.notice {
+  padding: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+  background: var(--c-primary-soft);
+  border-radius: var(--r-md);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  font-size: var(--fs-sm);
+
+  th,
+  td {
+    padding: var(--sp-3);
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  th {
+    color: var(--c-muted);
+    font-weight: 700;
+  }
+}

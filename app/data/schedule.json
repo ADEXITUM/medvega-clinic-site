@@ -1,0 +1,23 @@
+{
+  "slotMinutes": 30,
+  "horizonDays": 14,
+  "busyRatio": 0.35,
+  "doctors": {
+    "ivanova-anna": { "days": [1, 2, 3, 4, 5], "from": "08:00", "to": "14:00" },
+    "petrov-dmitriy": { "days": [1, 3, 5, 6], "from": "14:00", "to": "20:00" },
+    "smirnova-elena": { "days": [2, 4, 6], "from": "09:00", "to": "15:00" },
+    "kuznetsov-igor": { "days": [1, 2, 3, 4, 5], "from": "13:00", "to": "19:00" },
+    "volkova-marina": { "days": [1, 3, 5], "from": "09:00", "to": "16:00" },
+    "sokolov-artem": { "days": [2, 4, 6], "from": "10:00", "to": "17:00" },
+    "morozova-olga": { "days": [1, 2, 4, 5], "from": "08:30", "to": "14:30" },
+    "lebedeva-tatyana": { "days": [3, 5, 6], "from": "12:00", "to": "19:00" },
+    "kozlov-sergey": { "days": [1, 2, 3], "from": "09:00", "to": "15:00" },
+    "novikov-andrey": { "days": [4, 5, 6], "from": "13:00", "to": "20:00" },
+    "pavlova-irina": { "days": [1, 3, 5, 6], "from": "09:00", "to": "15:00" },
+    "semenov-pavel": { "days": [2, 4], "from": "12:00", "to": "19:00" },
+    "egorova-natalya": { "days": [1, 2, 3, 4], "from": "08:00", "to": "13:00" },
+    "orlov-maksim": { "days": [2, 4, 5, 6], "from": "14:00", "to": "20:00" },
+    "nikitina-svetlana": { "days": [1, 2, 3, 4, 5], "from": "08:00", "to": "13:00" },
+    "zaharov-roman": { "days": [1, 3, 5, 6], "from": "13:00", "to": "19:00" }
+  }
+}

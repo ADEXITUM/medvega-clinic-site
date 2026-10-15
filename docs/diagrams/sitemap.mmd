@@ -1,0 +1,28 @@
+flowchart TB
+  home["Главная<br/>/"]
+  home --> services["Направления<br/>/services"]
+  services --> service["Направление<br/>/services/[slug]<br/>(8 страниц)"]
+  home --> doctors["Врачи<br/>/doctors"]
+  doctors --> doctor["Врач<br/>/doctors/[slug]<br/>(16 страниц)"]
+  home --> prices["Цены<br/>/prices"]
+  home --> booking["Онлайн-запись<br/>/booking"]
+  home --> promo["Акции<br/>/promo"]
+  home --> reviews["Отзывы<br/>/reviews"]
+  home --> about["О клинике<br/>/about"]
+  home --> contacts["Контакты<br/>/contacts"]
+  home --> documents["Документы<br/>/documents"]
+  home --> my["Мои записи<br/>/my"]
+  documents --> privacy["Политика ПДн<br/>/privacy"]
+  home --> search["Поиск по сайту<br/>/search"]
+  home --> htmlmap["Карта сайта<br/>/sitemap"]
+  service -.-> booking
+  doctor -.-> booking
+  promo -.-> booking
+  booking -.-> my
+
+  classDef main fill:#e3f3f5,stroke:#0e6e7e,stroke-width:2px,color:#17262f
+  classDef dyn fill:#fff6e0,stroke:#9a3412,stroke-width:2px,color:#17262f
+  classDef pg fill:#ffffff,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  class home main
+  class service,doctor dyn
+  class services,doctors,prices,booking,promo,reviews,about,contacts,documents,my,privacy,search,htmlmap pg

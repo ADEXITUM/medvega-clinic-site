@@ -1,0 +1,192 @@
+@use 'mixins' as *;
+
+// Кнопки и поля форм – глобальные классы, чтобы ими пользовались и компоненты, и ссылки (NuxtLink)
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0.625rem 1.25rem;
+  font-weight: 700;
+  font-size: var(--fs-base);
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition);
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  // основная – акцентная, для записи
+  &--primary {
+    color: var(--c-on-accent);
+    background: var(--c-accent);
+
+    &:hover:not(:disabled) {
+      color: var(--c-on-accent);
+      background: var(--c-accent-hover);
+    }
+  }
+
+  // второстепенная – контурная
+  &--secondary {
+    color: var(--c-primary);
+    background: var(--c-surface);
+    border-color: var(--c-primary);
+
+    &:hover:not(:disabled) {
+      color: var(--c-on-primary);
+      background: var(--c-primary);
+    }
+  }
+
+  // текстовая
+  &--text {
+    padding-inline: var(--sp-2);
+    color: var(--c-primary);
+    background: transparent;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      color: var(--c-primary-hover);
+    }
+  }
+
+  &--block {
+    width: 100%;
+  }
+
+  &--sm {
+    min-height: var(--tap);
+    padding: 0.375rem 0.875rem;
+    font-size: var(--fs-sm);
+  }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  color: var(--c-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-md);
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+
+  &__label {
+    font-weight: 700;
+    font-size: var(--fs-sm);
+  }
+
+  &__req {
+    color: var(--c-error);
+  }
+
+  &__control {
+    width: 100%;
+    min-height: var(--tap);
+    padding: 0.625rem 0.875rem;
+    background: var(--c-surface);
+    border: 1px solid #8a9aa4;
+    border-radius: var(--r-sm);
+
+    &:focus-visible {
+      border-color: var(--c-primary);
+    }
+
+    &[aria-invalid='true'] {
+      border: 2px solid var(--c-error);
+    }
+  }
+
+  textarea.field__control {
+    min-height: 6rem;
+    resize: vertical;
+  }
+
+  &__error {
+    display: flex;
+    gap: var(--sp-1);
+    align-items: flex-start;
+    font-size: var(--fs-sm);
+    color: var(--c-error);
+  }
+
+  &__hint {
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+  }
+}
+
+.form {
+  display: grid;
+  gap: var(--sp-4);
+
+  &__row {
+    display: grid;
+    gap: var(--sp-4);
+
+    @include up(md) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__note {
+    font-size: var(--fs-xs);
+    color: var(--c-muted);
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0.375rem 1rem;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--c-text);
+  text-decoration: none;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+
+  &:hover {
+    border-color: var(--c-primary);
+  }
+
+  &[aria-pressed='true'],
+  &.router-link-exact-active,
+  &--active {
+    color: var(--c-on-primary);
+    background: var(--c-primary);
+    border-color: var(--c-primary);
+  }
+}

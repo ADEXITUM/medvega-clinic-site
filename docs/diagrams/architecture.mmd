@@ -1,0 +1,29 @@
+flowchart TB
+  subgraph build["Сборка и публикация"]
+    direction LR
+    git["Репозиторий GitHub<br/>ветка main"] --> actions["GitHub Actions:<br/>npm ci → lint →<br/>nuxt generate"]
+    data[("JSON-справочники<br/>app/data/*.json")] -. "встраиваются<br/>в HTML" .-> actions
+    actions --> artifact["Статические HTML,<br/>JS, CSS, sitemap.xml"]
+    artifact --> pagesHost["GitHub Pages<br/>(HTTPS)"]
+  end
+
+  subgraph client["Браузер посетителя"]
+    direction LR
+    pages["Страницы<br/>app/pages/*.vue"] --> comps["Компоненты<br/>app/components/*.vue"]
+    comps --> composables["Composables<br/>useA11y, usePromos,<br/>usePageSeo, useToast"]
+    composables --> api["Слой данных<br/>app/services/api.ts"]
+    pages --> api
+    api --> json[("Данные справочников<br/>(payload страницы)")]
+    api --> ls[("localStorage:<br/>записи, отзывы,<br/>настройки")]
+  end
+
+  build == "готовые HTML-страницы и payload" ==> client
+
+  classDef layer fill:#e3f3f5,stroke:#0e6e7e,stroke-width:2px,color:#17262f
+  classDef store fill:#fff6e0,stroke:#9a3412,stroke-width:2px,color:#17262f
+  classDef plain fill:#ffffff,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  class pages,comps,composables,api layer
+  class ls,json,data store
+  class git,actions,artifact,pagesHost plain
+  style client fill:#f8fbfc,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  style build fill:#f8fbfc,stroke:#17262f,stroke-width:1.5px,color:#17262f

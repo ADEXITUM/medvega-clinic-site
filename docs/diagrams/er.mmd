@@ -1,0 +1,62 @@
+erDiagram
+  DIRECTION ||--|{ SERVICE : "включает"
+  DIRECTION ||--|{ DOCTOR : "объединяет"
+  DOCTOR }o--|{ SERVICE : "оказывает"
+  DOCTOR ||--o{ SCHEDULE_SLOT : "имеет"
+  SCHEDULE_SLOT ||--o| BOOKING : "занят записью"
+  DOCTOR ||--o{ BOOKING : "принимает"
+  DOCTOR ||--o{ REVIEW : "получает"
+  DIRECTION ||--o{ PROMO : "действует в"
+
+  DIRECTION {
+    string slug PK
+    string title
+    string icon
+    string description
+  }
+  SERVICE {
+    string code PK
+    string direction FK
+    string title
+    int price
+  }
+  DOCTOR {
+    string slug PK
+    string direction FK
+    string name
+    string position
+    int experience
+    string category
+    bool children
+  }
+  SCHEDULE_SLOT {
+    string doctor FK
+    date date
+    string time
+    bool free
+  }
+  BOOKING {
+    string id PK
+    string doctor FK
+    date date
+    string time
+    string name
+    string phone
+    string email
+    string status
+  }
+  REVIEW {
+    string id PK
+    string doctor FK
+    string author
+    int rating
+    date date
+    bool pending
+  }
+  PROMO {
+    string slug PK
+    string direction FK
+    string title
+    date from
+    date until
+  }

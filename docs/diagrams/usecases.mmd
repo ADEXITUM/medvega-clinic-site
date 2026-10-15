@@ -1,0 +1,33 @@
+flowchart LR
+  patient(["Пациент"])
+  admin(["Администратор<br/>клиники"])
+
+  subgraph site["Корпоративный сайт «МедВега»"]
+    direction TB
+    uc1(["Просмотр направлений<br/>и услуг"])
+    uc2(["Поиск врача<br/>с фильтром"])
+    uc3(["Просмотр прайс-листа<br/>с поиском"])
+    uc4(["Онлайн-запись<br/>на приём"])
+    uc5(["Просмотр и отмена<br/>своих записей"])
+    uc6(["Заказ обратного<br/>звонка"])
+    uc7(["Оставить отзыв"])
+    uc8(["Версия для<br/>слабовидящих"])
+    uc9(["Ознакомление<br/>с документами"])
+    uc14(["Поиск по сайту"])
+    uc10(["Дать согласие<br/>на обработку ПДн"])
+    uc11(["Обновление справочников:<br/>врачи, услуги, цены, акции"])
+    uc12(["Модерация отзывов"])
+    uc13(["Ведение расписания"])
+  end
+
+  patient --- uc1 & uc2 & uc3 & uc4 & uc5 & uc6 & uc7 & uc8 & uc9 & uc14
+  uc4 -. "«include»" .-> uc10
+  uc6 -. "«include»" .-> uc10
+  uc7 -. "«include»" .-> uc10
+  admin --- uc11 & uc12 & uc13
+
+  classDef actor fill:#e3f3f5,stroke:#0e6e7e,stroke-width:2px,color:#17262f
+  classDef uc fill:#ffffff,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  class patient,admin actor
+  class uc1,uc2,uc3,uc4,uc5,uc6,uc7,uc8,uc9,uc10,uc11,uc12,uc13,uc14 uc
+  style site fill:#f8fbfc,stroke:#17262f,stroke-width:1.5px,color:#17262f

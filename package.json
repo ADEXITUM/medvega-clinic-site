@@ -1,0 +1,45 @@
+{
+  "name": "medvega-clinic-site",
+  "private": true,
+  "type": "module",
+  "description": "Корпоративный сайт частной медицинской компании «МедВега» (учебный проект)",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "node scripts/static-server.mjs 3000",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "typecheck": "nuxt typecheck",
+    "test:e2e": "playwright test",
+    "screens": "node scripts/screens.mjs",
+    "diagrams": "node scripts/diagrams.mjs"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "5.3.0",
+    "@lucide/vue": "1.49.0",
+    "nuxt": "4.5.2",
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "@nuxt/eslint": "1.17.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.0",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "9.1.2",
+    "lighthouse": "13.5.0",
+    "prettier": "3.9.9",
+    "sass": "1.105.1",
+    "serve": "14.2.6",
+    "typescript": "5.9.3",
+    "vue-tsc": "3.3.11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true,
+    "@parcel/watcher@2.6.0": true
+  }
+}

@@ -1,0 +1,90 @@
+@use 'mixins' as *;
+
+body {
+  font-family: var(--font-base);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--c-text);
+  background: var(--c-bg);
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  color: var(--c-text);
+}
+
+h1 {
+  font-size: var(--fs-2xl);
+}
+
+h2 {
+  font-size: var(--fs-xl);
+}
+
+h3 {
+  font-size: var(--fs-lg);
+}
+
+h4 {
+  font-size: var(--fs-md);
+}
+
+p + p {
+  margin-top: var(--sp-3);
+}
+
+a {
+  color: var(--c-primary);
+  text-underline-offset: 0.15em;
+
+  &:hover {
+    color: var(--c-primary-hover);
+  }
+}
+
+:focus-visible {
+  @include focus-ring;
+}
+
+strong,
+b {
+  font-weight: 700;
+}
+
+.text-muted {
+  color: var(--c-muted);
+}
+
+.text-small {
+  font-size: var(--fs-sm);
+}
+
+.lead {
+  font-size: var(--fs-md);
+  color: var(--c-muted);
+}
+
+.prose {
+  max-width: 75ch;
+
+  h2 {
+    margin-top: var(--sp-6);
+    margin-bottom: var(--sp-3);
+    font-size: var(--fs-lg);
+  }
+
+  ul,
+  ol {
+    margin: var(--sp-3) 0;
+    padding-left: var(--sp-5);
+  }
+
+  li + li {
+    margin-top: var(--sp-1);
+  }
+}

@@ -1,0 +1,76 @@
+@use 'mixins' as *;
+
+// Дизайн-токены: все цвета, отступы, радиусы, тени и шрифты задаются CSS-переменными.
+// Контраст основного текста и кнопок к фону не ниже 4,5:1 (WCAG 2.1 AA).
+:root {
+  // палитра
+  --c-primary: #0e6e7e; // сине-бирюзовый, 5,9:1 на белом
+  --c-primary-hover: #0a5562;
+  --c-primary-soft: #e3f3f5;
+  --c-accent: #c2410c; // кнопки записи, 5,2:1 на белом
+  --c-accent-hover: #9a3412;
+  --c-on-accent: #ffffff;
+  --c-on-primary: #ffffff;
+  --c-text: #17262f;
+  --c-muted: #4d5d68; // 6,6:1
+  --c-border: #d3dde2;
+  --c-bg: #f4f8fa;
+  --c-surface: #ffffff;
+  --c-success: #15803d;
+  --c-success-soft: #e7f6ec;
+  --c-error: #b91c1c;
+  --c-error-soft: #fdecec;
+  --c-warning-soft: #fff6e0;
+  --c-focus: #f59e0b;
+
+  // шрифт
+  --font-base: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.125rem;
+  --lh-base: 1.6;
+  --lh-tight: 1.25;
+
+  // отступы (шаг 4 px)
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  // радиусы и тени
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-full: 999px;
+  --shadow-sm: 0 1px 2px rgb(16 42 56 / 6%), 0 1px 3px rgb(16 42 56 / 8%);
+  --shadow-md: 0 4px 16px rgb(16 42 56 / 8%);
+  --shadow-lg: 0 12px 40px rgb(16 42 56 / 16%);
+
+  // сетка
+  --container: 1240px;
+  --gutter: 1rem;
+  --header-h: 64px;
+  --tap: 44px; // минимальный размер кликабельной области
+
+  --transition: 0.18s ease;
+
+  @include up(md) {
+    --gutter: 1.5rem;
+    --fs-xl: 2rem;
+    --fs-2xl: 2.625rem;
+  }
+
+  @include up(lg) {
+    --header-h: 76px;
+    --gutter: 2rem;
+    --fs-2xl: 3rem;
+  }
+}

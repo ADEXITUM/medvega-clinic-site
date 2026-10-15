@@ -1,0 +1,139 @@
+// Версия для слабовидящих (ГОСТ Р 52872-2019): атрибуты на <html> выставляет composable useA11y.
+// Все размеры заданы в rem, поэтому увеличение корневого шрифта масштабирует весь интерфейс.
+
+html[data-font='130'] {
+  font-size: 130%;
+}
+
+html[data-font='160'] {
+  font-size: 160%;
+}
+
+html[data-spacing='wide'] body {
+  letter-spacing: 0.12em;
+  word-spacing: 0.16em;
+}
+
+// При крупном шрифте точки перелома в px «не знают» об увеличении, поэтому вёрстка дополнительно страхуется:
+// длинные слова переносятся, шапка переходит на бургер-меню и может переноситься на вторую строку
+html[data-a11y='on'] body {
+  overflow-wrap: anywhere;
+}
+
+html[data-font='130'],
+html[data-font='160'] {
+  .header__nav {
+    display: none !important;
+  }
+
+  .header__burger {
+    display: inline-flex !important;
+  }
+
+  .header__inner {
+    flex-wrap: wrap;
+    padding-block: var(--sp-1);
+  }
+
+  .header__phone-text {
+    display: none !important;
+  }
+
+  .acc__meta {
+    white-space: normal;
+  }
+}
+
+html[data-font='160'] .header__cta {
+  display: none !important;
+}
+
+html[data-images='off'] {
+  img,
+  .illustration,
+  iframe {
+    display: none !important;
+  }
+}
+
+// общие правила для контрастных схем: без теней и полупрозрачных фонов, толстые границы
+html[data-scheme]:not([data-scheme='default']) {
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  .card,
+  .btn,
+  .field__control,
+  .badge {
+    border: 2px solid var(--c-text) !important;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+}
+
+html[data-scheme='bw'] {
+  --c-primary: #000;
+  --c-primary-hover: #000;
+  --c-primary-soft: #fff;
+  --c-accent: #000;
+  --c-accent-hover: #000;
+  --c-on-accent: #fff;
+  --c-on-primary: #fff;
+  --c-text: #000;
+  --c-muted: #000;
+  --c-border: #000;
+  --c-bg: #fff;
+  --c-surface: #fff;
+  --c-success: #000;
+  --c-success-soft: #fff;
+  --c-error: #000;
+  --c-error-soft: #fff;
+  --c-warning-soft: #fff;
+  --c-focus: #000;
+}
+
+html[data-scheme='wb'] {
+  --c-primary: #fff;
+  --c-primary-hover: #fff;
+  --c-primary-soft: #000;
+  --c-accent: #fff;
+  --c-accent-hover: #fff;
+  --c-on-accent: #000;
+  --c-on-primary: #000;
+  --c-text: #fff;
+  --c-muted: #fff;
+  --c-border: #fff;
+  --c-bg: #000;
+  --c-surface: #000;
+  --c-success: #fff;
+  --c-success-soft: #000;
+  --c-error: #fff;
+  --c-error-soft: #000;
+  --c-warning-soft: #000;
+  --c-focus: #ff0;
+  color-scheme: dark;
+}
+
+html[data-scheme='blue'] {
+  --c-primary: #063462;
+  --c-primary-hover: #063462;
+  --c-primary-soft: #9dd1ff;
+  --c-accent: #063462;
+  --c-accent-hover: #063462;
+  --c-on-accent: #9dd1ff;
+  --c-on-primary: #9dd1ff;
+  --c-text: #063462;
+  --c-muted: #063462;
+  --c-border: #063462;
+  --c-bg: #9dd1ff;
+  --c-surface: #9dd1ff;
+  --c-success: #063462;
+  --c-success-soft: #9dd1ff;
+  --c-error: #063462;
+  --c-error-soft: #9dd1ff;
+  --c-warning-soft: #9dd1ff;
+  --c-focus: #063462;
+}

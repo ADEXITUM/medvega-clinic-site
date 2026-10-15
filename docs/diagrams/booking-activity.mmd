@@ -1,0 +1,35 @@
+flowchart LR
+  subgraph A["Выбор параметров приёма"]
+    direction TB
+    start((("Начало"))) --> q{"Переход со страницы<br/>врача или направления?"}
+    q -- "да" --> pre["Подставить параметры<br/>из адреса страницы"]
+    q -- "нет" --> s1
+    pre --> s1
+    s1["Шаг 1. Выбор направления"] --> s2["Шаг 2. Выбор врача<br/>выбранного направления"]
+    s2 --> s3["Шаг 3. Выбор даты<br/>(14 дней, выходные врача<br/>недоступны)"]
+    s3 --> s4["Шаг 4. Выбор времени<br/>(слоты по 30 минут)"]
+  end
+
+  subgraph B["Оформление записи"]
+    direction TB
+    s5["Шаг 5. Ввод данных:<br/>ФИО, телефон, e-mail,<br/>комментарий, согласие"] --> v{"Поля заполнены<br/>верно?"}
+    v -- "нет" --> err["Показать ошибки<br/>под полями"]
+    err --> s5
+    v -- "да" --> api["services/api.ts:<br/>createBooking(),<br/>задержка 600–1000 мс"]
+    api --> free{"Слот ещё<br/>свободен?"}
+    free -- "нет" --> back["Сообщение «Время занято»,<br/>возврат к шагу 4"]
+    free -- "да" --> save["Сохранить запись<br/>в localStorage"]
+    save --> done["Экран «Вы записаны»"]
+    done --> fin((("Конец")))
+  end
+
+  A == "выбрано время" ==> B
+
+  classDef step fill:#e3f3f5,stroke:#0e6e7e,stroke-width:2px,color:#17262f
+  classDef dec fill:#fff6e0,stroke:#9a3412,stroke-width:2px,color:#17262f
+  classDef plain fill:#ffffff,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  class s1,s2,s3,s4,s5 step
+  class q,v,free dec
+  class pre,err,api,save,done,back plain
+  style A fill:#f8fbfc,stroke:#17262f,stroke-width:1.5px,color:#17262f
+  style B fill:#f8fbfc,stroke:#17262f,stroke-width:1.5px,color:#17262f
