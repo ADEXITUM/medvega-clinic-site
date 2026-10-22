@@ -26,7 +26,11 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#0e6e7e' },
         { name: 'format-detection', content: 'telephone=no' },
       ],
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: `${baseURL}favicon.svg` }],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: `${baseURL}favicon.svg` },
+        { rel: 'apple-touch-icon', href: `${baseURL}apple-touch-icon.png` },
+        { rel: 'manifest', href: `${baseURL}manifest.webmanifest` },
+      ],
     },
   },
 
@@ -39,6 +43,8 @@ export default defineNuxtConfig({
   ],
 
   vite: {
+    // один CSS-файл вместо десятка мелких: меньше блокирующих запросов перед первой отрисовкой на мобильной сети
+    build: { cssCodeSplit: false },
     css: {
       preprocessorOptions: {
         scss: { additionalData: '@use "~/assets/styles/mixins" as *;\n' },
@@ -66,6 +72,9 @@ export default defineNuxtConfig({
       ],
     },
   },
+
+  // стили компонентов уже собраны в общий CSS-файл – дублировать их внутри каждой HTML-страницы не нужно
+  features: { inlineStyles: false },
 
   typescript: { strict: true },
 

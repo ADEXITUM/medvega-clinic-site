@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight } from '@lucide/vue'
-import type { Direction, Doctor } from '~/types'
+import type { Direction, Doctor, DoctorStats } from '~/types'
 
 /** Карусель врачей на главной: горизонтальная прокрутка с привязкой (scroll-snap) и кнопки «назад/вперёд» */
-const props = defineProps<{ doctors: Doctor[]; directions: Direction[] }>()
+const props = defineProps<{
+  doctors: Doctor[]
+  directions: Direction[]
+  stats?: Record<string, DoctorStats> | null
+  next?: Record<string, string | null>
+}>()
 const track = ref<HTMLElement | null>(null)
 const dirTitle = (slug: string) => props.directions.find((d) => d.slug === slug)?.title
 
@@ -27,7 +32,7 @@ function scroll(dir: 1 | -1) {
     </div>
     <ul ref="track" class="carousel__track">
       <li v-for="d in doctors" :key="d.slug" class="carousel__item">
-        <DoctorCard :doctor="d" :direction-title="dirTitle(d.direction)" />
+        <DoctorCard :doctor="d" :direction-title="dirTitle(d.direction)" :stats="stats?.[d.slug]" :next="next?.[d.slug]" />
       </li>
     </ul>
   </div>
@@ -38,10 +43,14 @@ function scroll(dir: 1 | -1) {
   position: relative;
 
   &__controls {
-    display: flex;
+    display: none;
     gap: var(--sp-2);
     justify-content: flex-end;
     margin-bottom: var(--sp-3);
+
+    @include up(md) {
+      display: flex;
+    }
   }
 
   &__btn {

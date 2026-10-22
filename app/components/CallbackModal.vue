@@ -4,7 +4,13 @@ import { requestCallback } from '~/services/api'
 const open = useState('callback-open', () => false)
 const { show } = useToast()
 
-const form = reactive({ name: '', phone: '', consent: false })
+const form = reactive({ name: '', phone: '', time: 'now', consent: false })
+const TIMES = [
+  { value: 'now', label: 'Как можно скорее' },
+  { value: 'morning', label: 'Утром, 8:00–12:00' },
+  { value: 'day', label: 'Днём, 12:00–16:00' },
+  { value: 'evening', label: 'Вечером, 16:00–20:00' },
+]
 const errors = reactive({ name: '', phone: '', consent: '' })
 const sending = ref(false)
 
@@ -18,11 +24,11 @@ function validate() {
 async function submit() {
   if (!validate()) return
   sending.value = true
-  await requestCallback({ name: form.name.trim(), phone: form.phone })
+  await requestCallback({ name: form.name.trim(), phone: form.phone, time: form.time })
   sending.value = false
   open.value = false
   show(`Спасибо, ${form.name.trim()}! Администратор перезвонит вам в рабочее время.`)
-  Object.assign(form, { name: '', phone: '', consent: false })
+  Object.assign(form, { name: '', phone: '', time: 'now', consent: false })
 }
 
 watch(open, (v) => {
@@ -46,6 +52,12 @@ watch(open, (v) => {
         :error="errors.phone"
         @input="form.phone = formatPhone($event)"
       />
+      <div class="field">
+        <label for="cb-time" class="field__label">Когда удобно принять звонок</label>
+        <select id="cb-time" v-model="form.time" class="field__control">
+          <option v-for="t in TIMES" :key="t.value" :value="t.value">{{ t.label }}</option>
+        </select>
+      </div>
       <ConsentCheckbox v-model="form.consent" :error="errors.consent" />
       <button type="submit" class="btn btn--primary btn--block" :disabled="sending">
         {{ sending ? 'Отправляем…' : 'Жду звонка' }}

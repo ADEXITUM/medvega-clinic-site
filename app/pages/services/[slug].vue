@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getDirection, getDoctors, getFaq, getServices } from '~/services/api'
+import { directionPrice, getDirection, getDoctors, getFaq, getServices } from '~/services/api'
 
 const route = useRoute()
 const slug = String(route.params.slug)
@@ -13,10 +13,17 @@ const [{ data: services }, { data: doctors }, { data: faq }] = await Promise.all
   useAsyncData(`faq-${slug}`, () => getFaq(slug)),
 ])
 
+const stats = await useDoctorStats()
+const next = useNextDates(() => (doctors.value ?? []).map((d) => d.slug))
+const { active: allPromos } = await usePromos()
+const promos = computed(() => allPromos.value.filter((p) => p.direction === slug))
+const price = directionPrice(slug)
+
 usePageSeo({
   title: `${direction.value.title} – услуги и цены`,
-  description: `${direction.value.title} в клинике «МедВега»: ${direction.value.short} Цены, врачи и онлайн-запись.`,
+  description: `${direction.value.title} в клинике «МедВега»: ${plain(direction.value.short)} Цены, врачи и онлайн-запись.`,
 })
+useJsonLd('faq', () => faqJsonLd(faq.value ?? []))
 </script>
 
 <template>
@@ -30,9 +37,21 @@ usePageSeo({
         <p class="lead">{{ direction.description }}</p>
       </div>
     </div>
-    <NuxtLink :to="{ path: '/booking', query: { direction: direction.slug } }" class="btn btn--primary">
-      Записаться на приём
-    </NuxtLink>
+    <div class="dir-cta">
+      <NuxtLink :to="{ path: '/booking', query: { direction: direction.slug } }" class="btn btn--primary">
+        Записаться на приём
+      </NuxtLink>
+      <p class="dir-cta__price">
+        {{ price.isVisit ? 'Приём' : 'Исследование' }} от <strong>{{ formatPrice(price.price) }}</strong>
+      </p>
+    </div>
+
+    <section v-if="promos.length" class="block" aria-labelledby="h-promo">
+      <h2 id="h-promo" class="block__title">Акции направления</h2>
+      <ul class="grid grid--3">
+        <li v-for="p in promos" :key="p.slug"><PromoCard :promo="p" /></li>
+      </ul>
+    </section>
 
     <section class="block" aria-labelledby="h-services">
       <h2 id="h-services" class="block__title">Услуги и цены</h2>
@@ -63,7 +82,7 @@ usePageSeo({
     <section class="block" aria-labelledby="h-doctors">
       <h2 id="h-doctors" class="block__title">Врачи направления</h2>
       <ul class="grid grid--3">
-        <li v-for="d in doctors" :key="d.slug"><DoctorCard :doctor="d" /></li>
+        <li v-for="d in doctors" :key="d.slug"><DoctorCard :doctor="d" :stats="stats?.[d.slug]" :next="next[d.slug]" /></li>
       </ul>
     </section>
 
@@ -77,6 +96,21 @@ usePageSeo({
 </template>
 
 <style lang="scss" scoped>
+.dir-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-5);
+  align-items: center;
+
+  &__price {
+    color: var(--c-muted);
+
+    strong {
+      color: var(--c-text);
+    }
+  }
+}
+
 .dir-head {
   display: flex;
   flex-direction: column;

@@ -1,19 +1,32 @@
 <script setup lang="ts">
-import { ArrowLeft, CalendarDays, CircleCheck, Clock, User } from '@lucide/vue'
-import type { Booking, Slot } from '~/types'
-import { createBooking, getDirections, getDoctors, getSlots, getWorkingDays } from '~/services/api'
+import { ArrowLeft, CalendarDays, CalendarPlus, CircleCheck, Clock, Printer, RefreshCw, Route, Star, User, Wallet } from '@lucide/vue'
+import type { Booking, DayInfo, Slot } from '~/types'
+import {
+  cancelBooking,
+  createBooking,
+  directionPrice,
+  getClinic,
+  getDirections,
+  getDoctors,
+  getNextFreeDates,
+  getSlots,
+  getWorkingDays,
+} from '~/services/api'
 
 usePageSeo({
   title: 'Онлайн-запись к врачу',
   description: 'Запишитесь к врачу клиники «МедВега» онлайн: выберите направление, специалиста, дату и свободное время.',
 })
 
-const [{ data: directions }, { data: doctors }] = await Promise.all([
+const [{ data: directions }, { data: doctors }, { data: clinic }] = await Promise.all([
   useAsyncData('directions', getDirections),
   useAsyncData('doctors', () => getDoctors()),
+  useAsyncData('clinic', getClinic),
 ])
+const stats = await useDoctorStats()
 
 const STEPS = ['Направление', 'Врач', 'Дата', 'Время', 'Ваши данные']
+const DRAFT_KEY = 'medvega:booking-draft'
 const step = ref(1)
 const maxReached = ref(1)
 
@@ -22,26 +35,46 @@ const form = reactive({ name: '', phone: '', email: '', comment: '', consent: fa
 const errors = reactive({ name: '', phone: '', email: '', consent: '' })
 const touched = ref(false)
 
-const days = ref<{ date: string; working: boolean }[]>([])
+const days = ref<DayInfo[]>([])
 const slots = ref<Slot[]>([])
+const nextDates = ref<Record<string, string | null>>({})
 const loading = ref(false)
 const sending = ref(false)
 const submitError = ref('')
 const done = ref<Booking | null>(null)
+const reschedule = ref('') // номер переносимой записи
 
 const doctorsOfDirection = computed(() => (doctors.value ?? []).filter((d) => d.direction === choice.direction))
 const selectedDirection = computed(() => directions.value?.find((d) => d.slug === choice.direction))
 const selectedDoctor = computed(() => doctors.value?.find((d) => d.slug === choice.doctor))
+const visitPrice = computed(() => (choice.doctor ? stats.value?.[choice.doctor]?.priceFrom : undefined))
+
+// слоты сгруппированы по времени суток: утро, день, вечер
+const slotGroups = computed(() => {
+  const groups: { part: string; items: Slot[] }[] = []
+  for (const s of slots.value) {
+    const part = dayPart(s.time)
+    let g = groups.find((x) => x.part === part)
+    if (!g) groups.push((g = { part, items: [] }))
+    g.items.push(s)
+  }
+  return groups
+})
 
 const stepHeading = ref<HTMLElement | null>(null)
 
 async function goTo(n: number) {
   step.value = n
   maxReached.value = Math.max(maxReached.value, n)
+  if (n === 2) loadNextDates()
   if (n === 3) await loadDays()
   if (n === 4) await loadSlots()
   await nextTick()
   stepHeading.value?.focus()
+}
+
+async function loadNextDates() {
+  nextDates.value = await getNextFreeDates(doctorsOfDirection.value.map((d) => d.slug))
 }
 
 async function loadDays() {
@@ -94,6 +127,25 @@ function validate() {
 }
 watch(form, () => touched.value && validate())
 
+// Черновик: выбор и введённые данные (кроме согласия) переживают перезагрузку страницы
+function saveDraft() {
+  if (done.value) return
+  try {
+    const { consent: _c, ...fields } = form
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ choice, form: fields, step: step.value }))
+  } catch {
+    /* без черновика */
+  }
+}
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(DRAFT_KEY)
+  } catch {
+    /* нет доступа к хранилищу */
+  }
+}
+watch([choice, form, step], saveDraft, { deep: true })
+
 async function submit() {
   touched.value = true
   submitError.value = ''
@@ -114,6 +166,9 @@ async function submit() {
       email: form.email.trim() || undefined,
       comment: form.comment.trim() || undefined,
     })
+    // при переносе старая запись отменяется только после успешного создания новой
+    if (reschedule.value) await cancelBooking(reschedule.value)
+    clearDraft()
     window.scrollTo({ top: 0 })
     await nextTick()
     document.getElementById('done-title')?.focus()
@@ -131,30 +186,54 @@ function restart() {
   Object.assign(form, { name: '', phone: '', email: '', comment: '', consent: false })
   touched.value = false
   done.value = null
+  reschedule.value = ''
   maxReached.value = 1
   goTo(1)
 }
 
+function addToCalendar() {
+  if (!done.value || !selectedDoctor.value || !clinic.value) return
+  const title = `Приём: ${selectedDirection.value?.title}, ${selectedDoctor.value.name}`
+  downloadFile(`zapis-${done.value.id}.ics`, bookingIcs(done.value, title, `${clinic.value.name}, ${clinic.value.address.full}`))
+}
+const print = () => window.print()
+
 /**
  * Переход со страницы врача или направления: ?direction=…&doctor=…&date=…&time=…
- * Мастер открывается на первом невыбранном шаге.
+ * Мастер открывается на первом невыбранном шаге. Без параметров восстанавливается черновик.
  */
 const route = useRoute()
 onMounted(async () => {
   const q = route.query
-  const dir = typeof q.direction === 'string' ? q.direction : ''
-  const doc = typeof q.doctor === 'string' ? q.doctor : ''
+  reschedule.value = typeof q.reschedule === 'string' ? q.reschedule : ''
+  let dir = typeof q.direction === 'string' ? q.direction : ''
+  let doc = typeof q.doctor === 'string' ? q.doctor : ''
+  let date = typeof q.date === 'string' ? q.date : ''
+  let time = typeof q.time === 'string' ? q.time : ''
+  if (!dir) {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+      if (draft) {
+        ;({ direction: dir, doctor: doc, date, time } = draft.choice)
+        Object.assign(form, draft.form)
+      }
+    } catch {
+      /* повреждённый черновик игнорируется */
+    }
+  }
   if (!dir || !directions.value?.some((d) => d.slug === dir)) return
   choice.direction = dir
-  if (!doc || !doctorsOfDirection.value.some((d) => d.slug === doc)) return void (maxReached.value = 2, (step.value = 2))
+  if (!doc || !doctorsOfDirection.value.some((d) => d.slug === doc)) {
+    maxReached.value = 2
+    step.value = 2
+    return loadNextDates()
+  }
   choice.doctor = doc
   await loadDays()
-  const date = typeof q.date === 'string' ? q.date : ''
-  if (!days.value.some((d) => d.date === date && d.working)) return void (maxReached.value = 3, (step.value = 3))
+  if (!days.value.some((d) => d.date === date && d.free)) return void ((maxReached.value = 3), (step.value = 3))
   choice.date = date
   await loadSlots()
-  const time = typeof q.time === 'string' ? q.time : ''
-  if (!slots.value.some((s) => s.time === time && s.free)) return void (maxReached.value = 4, (step.value = 4))
+  if (!slots.value.some((s) => s.time === time && s.free)) return void ((maxReached.value = 4), (step.value = 4))
   choice.time = time
   maxReached.value = 5
   step.value = 5
@@ -169,7 +248,10 @@ onMounted(async () => {
     <section v-if="done" class="done card" aria-labelledby="done-title" data-testid="booking-done">
       <CircleCheck :size="56" aria-hidden="true" class="done__icon" />
       <h1 id="done-title" class="done__title" tabindex="-1">Вы записаны!</h1>
-      <p class="lead">Ждём вас в клинике. Если планы изменятся, отмените запись в разделе «Мои записи».</p>
+      <p class="lead">
+        {{ reschedule ? 'Запись перенесена, прежняя запись отменена.' : 'Ждём вас в клинике.' }} Если планы изменятся, отмените
+        или перенесите запись в разделе «Мои записи».
+      </p>
       <dl class="summary">
         <div><dt>Номер записи</dt><dd>{{ done.id }}</dd></div>
         <div><dt>Направление</dt><dd>{{ selectedDirection?.title }}</dd></div>
@@ -177,15 +259,29 @@ onMounted(async () => {
         <div><dt>Дата и время</dt><dd>{{ formatDayShort(done.date).full }}, {{ done.time }}</dd></div>
         <div><dt>Пациент</dt><dd>{{ done.name }}</dd></div>
         <div><dt>Телефон</dt><dd>{{ done.phone }}</dd></div>
+        <div v-if="visitPrice"><dt>Стоимость приёма</dt><dd>от {{ formatPrice(visitPrice) }}, оплата в клинике</dd></div>
+        <div v-if="clinic"><dt>Адрес</dt><dd>{{ clinic.address.full }}</dd></div>
       </dl>
-      <div class="done__actions">
+      <p class="text-muted text-small">Возьмите с собой паспорт. Приходите за 10 минут, чтобы оформить договор.</p>
+      <div class="done__actions no-print">
         <NuxtLink to="/my" class="btn btn--primary">Мои записи</NuxtLink>
-        <button type="button" class="btn btn--secondary" @click="restart">Записаться ещё</button>
+        <button type="button" class="btn btn--secondary" data-testid="add-calendar" @click="addToCalendar">
+          <CalendarPlus :size="18" aria-hidden="true" /> Добавить в календарь
+        </button>
+        <button type="button" class="btn btn--secondary" @click="print">
+          <Printer :size="18" aria-hidden="true" /> Распечатать
+        </button>
+        <NuxtLink to="/contacts" class="btn btn--text"><Route :size="18" aria-hidden="true" /> Как добраться</NuxtLink>
+        <button type="button" class="btn btn--text" @click="restart">Записаться ещё</button>
       </div>
     </section>
 
     <template v-else>
       <h1 class="page__title">Онлайн-запись к врачу</h1>
+      <p v-if="reschedule" class="notice reschedule" data-testid="reschedule-note">
+        <RefreshCw :size="18" aria-hidden="true" /> Перенос записи № {{ reschedule }}: выберите новое время. Прежняя запись
+        отменится после подтверждения новой.
+      </p>
       <BookingProgress :steps="STEPS" :current="step" :max-reached="maxReached" @go="goTo" />
 
       <div class="booking__layout">
@@ -203,7 +299,12 @@ onMounted(async () => {
                   @click="pickDirection(d.slug)"
                 >
                   <DirectionIcon :name="d.icon" :size="24" />
-                  <span>{{ d.title }}</span>
+                  <span class="option__text">
+                    <span>{{ d.title }}</span>
+                    <span class="option__sub">
+                      {{ directionPrice(d.slug).isVisit ? 'приём от' : 'от' }} {{ formatPrice(directionPrice(d.slug).price) }}
+                    </span>
+                  </span>
                 </button>
               </li>
             </ul>
@@ -224,7 +325,14 @@ onMounted(async () => {
                   <DoctorAvatar :name="d.name" :direction="d.direction" />
                   <span class="option__text">
                     <strong>{{ d.name }}</strong>
-                    <span class="text-muted text-small">{{ d.position }}, стаж {{ experienceText(d.experience) }}</span>
+                    <span class="option__sub">{{ d.position }}, стаж {{ experienceText(d.experience) }}</span>
+                    <span class="option__facts">
+                      <span v-if="stats?.[d.slug]?.rating">
+                        <Star :size="14" aria-hidden="true" class="option__star" /> {{ formatRating(stats[d.slug]!.rating!) }}
+                      </span>
+                      <span v-if="stats?.[d.slug]">приём от {{ formatPrice(stats[d.slug]!.priceFrom) }}</span>
+                      <span v-if="nextDates[d.slug]" class="option__next">ближайшая запись: {{ relativeDay(nextDates[d.slug]!) }}</span>
+                    </span>
                   </span>
                 </button>
               </li>
@@ -234,22 +342,23 @@ onMounted(async () => {
           <!-- Шаг 3 -->
           <template v-else-if="step === 3">
             <h2 :id="`step-3-title`" ref="stepHeading" tabindex="-1" class="booking__title">Выберите дату</h2>
-            <p class="text-muted text-small">Запись открыта на 14 дней вперёд. Недоступные даты – выходные дни врача.</p>
-            <p v-if="loading" class="text-muted">Загружаем расписание…</p>
+            <p class="text-muted text-small">Запись открыта на 14 дней вперёд. Под датой – число свободных окон.</p>
+            <SkeletonBlock v-if="loading" :chips="10" />
             <ul v-else class="calendar" data-testid="calendar">
-              <li v-for="d in days" :key="d.date">
+              <li v-for="(d, i) in days" :key="d.date">
                 <button
                   type="button"
                   :class="['day', { 'day--active': choice.date === d.date }]"
-                  :disabled="!d.working"
+                  :disabled="!d.free"
                   :aria-pressed="choice.date === d.date"
-                  :aria-label="`${formatDayShort(d.date).full}${d.working ? '' : ', врач не принимает'}`"
+                  :aria-label="`${formatDayShort(d.date).full}${!d.working ? ', врач не принимает' : d.free ? `, свободно окон: ${d.free}` : ', мест нет'}`"
                   :data-date="d.date"
                   @click="pickDate(d.date)"
                 >
-                  <span class="day__wd">{{ formatDayShort(d.date).weekday }}</span>
+                  <span class="day__wd">{{ i === 0 ? 'завтра' : formatDayShort(d.date).weekday }}</span>
                   <span class="day__num">{{ formatDayShort(d.date).day }}</span>
                   <span class="day__month">{{ formatDayShort(d.date).month.slice(0, 3) }}</span>
+                  <span class="day__free" aria-hidden="true">{{ !d.working ? 'выходной' : d.free ? `${d.free} ${plural(d.free, ['окно', 'окна', 'окон'])}` : 'мест нет' }}</span>
                 </button>
               </li>
             </ul>
@@ -260,22 +369,27 @@ onMounted(async () => {
             <h2 :id="`step-4-title`" ref="stepHeading" tabindex="-1" class="booking__title">Выберите время</h2>
             <p class="text-muted text-small">{{ formatDayShort(choice.date).full }}. Приём длится 30 минут, занятое время недоступно.</p>
             <p v-if="submitError" class="field__error" role="alert">{{ submitError }}</p>
-            <p v-if="loading" class="text-muted">Загружаем свободное время…</p>
-            <ul v-else-if="slots.some((s) => s.free)" class="slots" data-testid="slots">
-              <li v-for="s in slots" :key="s.time">
-                <button
-                  type="button"
-                  :class="['slot', { 'slot--active': choice.time === s.time }]"
-                  :disabled="!s.free"
-                  :aria-pressed="choice.time === s.time"
-                  :aria-label="s.free ? s.time : `${s.time}, занято`"
-                  :data-time="s.time"
-                  @click="pickTime(s.time)"
-                >
-                  {{ s.time }}
-                </button>
-              </li>
-            </ul>
+            <SkeletonBlock v-if="loading" :chips="8" />
+            <div v-else-if="slots.some((s) => s.free)" class="slot-groups" data-testid="slots">
+              <div v-for="g in slotGroups" :key="g.part" class="slot-group">
+                <h3 class="slot-group__title">{{ g.part }}</h3>
+                <ul class="slots">
+                  <li v-for="s in g.items" :key="s.time">
+                    <button
+                      type="button"
+                      :class="['slot', { 'slot--active': choice.time === s.time }]"
+                      :disabled="!s.free"
+                      :aria-pressed="choice.time === s.time"
+                      :aria-label="s.free ? s.time : `${s.time}, занято`"
+                      :data-time="s.time"
+                      @click="pickTime(s.time)"
+                    >
+                      {{ s.time }}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
             <p v-else class="notice">На этот день свободного времени нет. Выберите другую дату.</p>
           </template>
 
@@ -313,10 +427,10 @@ onMounted(async () => {
                   :error="errors.email"
                 />
               </div>
-              <FormField v-model="form.comment" label="Комментарий" multiline hint="Например, что беспокоит или удобный способ связи" />
+              <FormField v-model="form.comment" label="Комментарий" multiline hint="Например, удобный способ связи" />
               <ConsentCheckbox v-model="form.consent" :error="errors.consent" />
               <button type="submit" class="btn btn--primary booking__submit" :disabled="sending" data-testid="booking-submit">
-                {{ sending ? 'Записываем…' : 'Записаться' }}
+                {{ sending ? 'Записываем…' : reschedule ? 'Перенести запись' : 'Записаться' }}
               </button>
               <p class="form__note">
                 Учебный сайт: данные никуда не передаются и хранятся только в вашем браузере. Отправка имитируется.
@@ -344,6 +458,10 @@ onMounted(async () => {
             <div v-if="choice.time">
               <dt><Clock :size="16" aria-hidden="true" /> Время</dt>
               <dd>{{ choice.time }}</dd>
+            </div>
+            <div v-if="visitPrice">
+              <dt><Wallet :size="16" aria-hidden="true" /> Стоимость приёма</dt>
+              <dd>от {{ formatPrice(visitPrice) }}</dd>
             </div>
           </dl>
         </aside>
@@ -402,6 +520,16 @@ onMounted(async () => {
   }
 }
 
+.reschedule {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-base);
+  color: var(--c-text);
+  background: var(--c-warning-soft);
+}
+
 .options {
   display: grid;
   gap: var(--sp-3);
@@ -428,7 +556,7 @@ onMounted(async () => {
   border-radius: var(--r-md);
   transition: border-color var(--transition);
 
-  svg {
+  > svg {
     flex-shrink: 0;
     color: var(--c-primary);
   }
@@ -446,11 +574,42 @@ onMounted(async () => {
     display: grid;
     gap: 2px;
   }
+
+  &__sub {
+    font-weight: 400;
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+  }
+
+  &__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-3);
+    margin-top: var(--sp-1);
+    font-weight: 400;
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+
+    > span {
+      display: inline-flex;
+      gap: 2px;
+      align-items: center;
+    }
+  }
+
+  &__star {
+    color: #b45309;
+    fill: #f59e0b;
+  }
+
+  &__next {
+    color: var(--c-success);
+  }
 }
 
 .calendar {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
   gap: var(--sp-2);
 }
 
@@ -458,8 +617,8 @@ onMounted(async () => {
   display: grid;
   justify-items: center;
   width: 100%;
-  min-height: 5rem;
-  padding: var(--sp-2);
+  min-height: 5.5rem;
+  padding: var(--sp-2) var(--sp-1);
   color: var(--c-text);
   background: var(--c-surface);
   border: 2px solid var(--c-border);
@@ -491,6 +650,32 @@ onMounted(async () => {
     font-weight: 700;
     font-size: var(--fs-lg);
   }
+
+  &__free {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--c-success);
+  }
+
+  &:disabled &__free {
+    color: var(--c-muted);
+    font-weight: 400;
+  }
+
+  &--active &__free {
+    color: var(--c-on-primary);
+  }
+}
+
+.slot-groups {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.slot-group__title {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-base);
+  color: var(--c-muted);
 }
 
 .slots {

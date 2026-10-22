@@ -12,13 +12,16 @@ import promosJson from '~/data/promos.json'
 import reviewsJson from '~/data/reviews.json'
 import faqJson from '~/data/faq.json'
 import clinicJson from '~/data/clinic.json'
+import { typo } from '~/utils/typo'
 import type {
   Booking,
   BookingRequest,
   CallbackRequest,
   Clinic,
+  DayInfo,
   Direction,
   Doctor,
+  DoctorStats,
   Faq,
   Promo,
   Review,
@@ -27,13 +30,14 @@ import type {
   Slot,
 } from '~/types'
 
-const directions = directionsJson as Direction[]
+// Тексты для показа на экране проходят типографскую обработку один раз при загрузке модуля
+const directions = (directionsJson as Direction[]).map((d) => ({ ...d, short: typo(d.short), description: typo(d.description) }))
 const services = servicesJson as Service[]
-const doctors = doctorsJson as Doctor[]
+const doctors = (doctorsJson as Doctor[]).map((d) => ({ ...d, about: typo(d.about) }))
 const schedule = scheduleJson as Schedule
-const promos = promosJson as Promo[]
-const reviews = reviewsJson as Review[]
-const faq = faqJson as Faq[]
+const promos = (promosJson as Promo[]).map((p) => ({ ...p, title: typo(p.title), text: typo(p.text) }))
+const reviews = (reviewsJson as Review[]).map((r) => ({ ...r, text: typo(r.text) }))
+const faq = (faqJson as Faq[]).map((f) => ({ ...f, q: typo(f.q), a: typo(f.a) }))
 const clinic = clinicJson as Clinic
 
 const BOOKINGS_KEY = 'medvega:bookings'
@@ -87,6 +91,33 @@ export const getFaq = (direction?: string | null) =>
   delay(clone(direction === undefined ? faq : faq.filter((f) => f.direction === direction)))
 
 /**
+ * Цена приёма направления: минимальная цена среди услуг «Приём…»;
+ * если приёмов нет (УЗИ), берётся минимальная цена направления.
+ */
+export function directionPrice(slug: string) {
+  const list = services.filter((s) => s.direction === slug)
+  const visits = list.filter((s) => s.title.startsWith('Приём'))
+  const source = visits.length ? visits : list
+  return { price: Math.min(...source.map((s) => s.price)), isVisit: visits.length > 0 }
+}
+
+/** Рейтинг по отзывам, число отзывов и цена первичного приёма для каждого врача */
+export function getDoctorStats() {
+  const stats: Record<string, DoctorStats> = {}
+  for (const d of doctors) {
+    const own = reviews.filter((r) => r.doctor === d.slug)
+    const visits = services.filter((s) => d.services.includes(s.code) && s.title.startsWith('Приём'))
+    const all = services.filter((s) => d.services.includes(s.code))
+    stats[d.slug] = {
+      rating: own.length ? Math.round((own.reduce((s, r) => s + r.rating, 0) / own.length) * 10) / 10 : null,
+      reviews: own.length,
+      priceFrom: Math.min(...(visits.length ? visits : all).map((s) => s.price)),
+    }
+  }
+  return delay(stats, 50, 150)
+}
+
+/**
  * Акции. По умолчанию возвращаются только действующие на сегодня.
  * Статическим страницам нужен полный список: фильтрация по дате посетителя выполняется уже в браузере (usePromos)
  */
@@ -123,53 +154,62 @@ const toMinutes = (t: string) => {
 }
 const fromMinutes = (n: number) => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`
 
-/** Рабочие дни врача на horizonDays дней вперёд, начиная с завтрашнего */
-export function getWorkingDays(doctor: string, from = new Date()) {
+function readBookings() {
+  return readLocal<Booking[]>(BOOKINGS_KEY, [])
+}
+
+/** Слоты врача на дату без задержки – общая основа для расписания, календаря и ближайших окон */
+function computeSlots(doctor: string, date: string, booked = readBookings()): Slot[] {
   const hours = schedule.doctors[doctor]
-  const result: { date: string; working: boolean }[] = []
+  if (!hours || !hours.days.includes(weekday(new Date(`${date}T00:00:00`)))) return []
+  const taken = new Set(
+    booked.filter((b) => b.status === 'active' && b.doctor === doctor && b.date === date).map((b) => b.time),
+  )
+  const slots: Slot[] = []
+  for (let t = toMinutes(hours.from); t + schedule.slotMinutes <= toMinutes(hours.to); t += schedule.slotMinutes) {
+    const time = fromMinutes(t)
+    slots.push({ time, free: !isMockBusy(doctor, date, time) && !taken.has(time) })
+  }
+  return slots
+}
+
+/** Дни на horizonDays вперёд, начиная с завтрашнего: рабочий ли день и сколько свободных окон */
+function computeDays(doctor: string, from = new Date()): DayInfo[] {
+  const booked = readBookings()
+  const hours = schedule.doctors[doctor]
+  const result: DayInfo[] = []
   for (let i = 1; i <= schedule.horizonDays; i++) {
     const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i)
-    result.push({ date: toIsoDate(d), working: !!hours && hours.days.includes(weekday(d)) })
-  }
-  return delay(result, 100, 250)
-}
-
-/** Слоты по 30 минут на дату. Слот занят, если он занят в мок-расписании или уже забронирован на этом устройстве */
-export function getSlots(doctor: string, date: string) {
-  const hours = schedule.doctors[doctor]
-  const slots: Slot[] = []
-  if (hours && hours.days.includes(weekday(new Date(`${date}T00:00:00`)))) {
-    const booked = new Set(
-      readBookings()
-        .filter((b) => b.status === 'active' && b.doctor === doctor && b.date === date)
-        .map((b) => b.time),
-    )
-    for (let t = toMinutes(hours.from); t + schedule.slotMinutes <= toMinutes(hours.to); t += schedule.slotMinutes) {
-      const time = fromMinutes(t)
-      slots.push({ time, free: !isMockBusy(doctor, date, time) && !booked.has(time) })
-    }
-  }
-  return delay(slots, 200, 400)
-}
-
-/** Ближайшие свободные окна врача (для страницы врача) */
-export async function getNearestSlots(doctor: string, limit = 6) {
-  const days = (await getWorkingDays(doctor)).filter((d) => d.working)
-  const result: { date: string; time: string }[] = []
-  for (const day of days) {
-    for (const s of await getSlots(doctor, day.date)) {
-      if (s.free) result.push({ date: day.date, time: s.time })
-      if (result.length >= limit) return result
-    }
+    const date = toIsoDate(d)
+    const working = !!hours && hours.days.includes(weekday(d))
+    result.push({ date, working, free: working ? computeSlots(doctor, date, booked).filter((s) => s.free).length : 0 })
   }
   return result
 }
 
-// ---------- записи (localStorage) ----------
+export const getWorkingDays = (doctor: string, from = new Date()) => delay(computeDays(doctor, from), 100, 250)
 
-function readBookings() {
-  return readLocal<Booking[]>(BOOKINGS_KEY, [])
+/** Слоты по 30 минут на дату. Слот занят, если он занят в мок-расписании или уже забронирован на этом устройстве */
+export const getSlots = (doctor: string, date: string) => delay(computeSlots(doctor, date), 200, 400)
+
+/** Ближайшие свободные окна врача (для страницы врача) */
+export function getNearestSlots(doctor: string, limit = 6) {
+  const result: { date: string; time: string }[] = []
+  for (const day of computeDays(doctor).filter((d) => d.free)) {
+    for (const s of computeSlots(doctor, day.date)) if (s.free && result.length < limit) result.push({ date: day.date, time: s.time })
+    if (result.length >= limit) break
+  }
+  return delay(result, 150, 300)
 }
+
+/** Ближайшая свободная дата для каждого врача (каталог и шаг выбора врача) */
+export function getNextFreeDates(slugs: string[]) {
+  const result: Record<string, string | null> = {}
+  for (const slug of slugs) result[slug] = computeDays(slug).find((d) => d.free)?.date ?? null
+  return delay(result, 100, 250)
+}
+
+// ---------- записи (localStorage) ----------
 
 export const getBookings = () => delay(readBookings())
 

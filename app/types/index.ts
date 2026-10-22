@@ -39,6 +39,18 @@ export interface Schedule {
   doctors: Record<string, WorkHours>
 }
 
+export interface DoctorStats {
+  rating: number | null
+  reviews: number
+  priceFrom: number
+}
+
+export interface DayInfo {
+  date: string
+  working: boolean
+  free: number // число свободных окон
+}
+
 export interface Slot {
   time: string // ЧЧ:ММ
   free: boolean
@@ -51,6 +63,7 @@ export interface Promo {
   direction: string
   from: string
   until: string
+  badge?: string
 }
 
 export interface Review {
@@ -100,6 +113,7 @@ export interface Clinic {
   history: { year: string; text: string }[]
   equipment: string[]
   regulators: Regulator[]
+  vacancies: { title: string; text: string }[]
 }
 
 export interface BookingRequest {
@@ -122,4 +136,5 @@ export interface Booking extends BookingRequest {
 export interface CallbackRequest {
   name: string
   phone: string
+  time?: string
 }

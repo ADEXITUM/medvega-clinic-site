@@ -34,7 +34,7 @@ function accept() {
 .cookie {
   position: fixed;
   right: var(--sp-3);
-  bottom: var(--sp-3);
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   left: var(--sp-3);
   z-index: 150;
   display: flex;
@@ -50,6 +50,10 @@ function accept() {
   @include up(md) {
     left: auto;
     max-width: 30rem;
+  }
+
+  @include up(lg) {
+    bottom: var(--sp-3);
   }
 
   &__text {

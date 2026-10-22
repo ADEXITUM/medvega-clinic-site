@@ -11,17 +11,21 @@ const [{ data: directions }, { data: doctors }, { data: services }] = await Prom
   useAsyncData('services', () => getServices()),
 ])
 
+const POPULAR = ['УЗИ', 'Кардиолог', 'ЭКГ', 'Детский', 'Справка', 'Зрение']
+
 // Запрос хранится в адресе (?q=…); применяется после монтирования, чтобы гидратация совпала со статическим HTML
 const route = useRoute()
 const router = useRouter()
 const query = ref('')
+const input = ref<HTMLInputElement | null>(null)
 onMounted(() => {
   query.value = typeof route.query.q === 'string' ? route.query.q : ''
+  if (!query.value) input.value?.focus()
 })
 watch(query, (v) => router.replace({ query: v.trim() ? { q: v.trim() } : {} }))
 
 const term = computed(() => query.value.trim().toLocaleLowerCase('ru'))
-const has = (s: string) => s.toLocaleLowerCase('ru').includes(term.value)
+const has = (s: string) => plain(s).toLocaleLowerCase('ru').includes(term.value)
 
 const found = computed(() => {
   if (term.value.length < 2) return null
@@ -46,6 +50,7 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
         <Search :size="20" aria-hidden="true" class="search__icon" />
         <input
           id="site-search"
+          ref="input"
           v-model="query"
           type="search"
           class="field__control"
@@ -57,6 +62,10 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
       <p class="field__hint" aria-live="polite">
         {{ found ? `Найдено: ${total}` : 'Введите не меньше двух букв' }}
       </p>
+      <div class="search__popular">
+        <span class="text-muted text-small">Часто ищут:</span>
+        <button v-for="p in POPULAR" :key="p" type="button" class="chip" @click="query = p">{{ p }}</button>
+      </div>
     </form>
 
     <template v-if="found">
@@ -64,8 +73,8 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
         <h2 id="h-r-dir" class="res__title">Направления</h2>
         <ul class="res__list">
           <li v-for="d in found.directions" :key="d.slug">
-            <NuxtLink :to="`/services/${d.slug}`">{{ d.title }}</NuxtLink>
-            <span class="text-muted text-small"> – {{ d.short }}</span>
+            <NuxtLink :to="`/services/${d.slug}`"><HighlightText :text="d.title" :term="term" /></NuxtLink>
+            <span class="text-muted text-small"> – <HighlightText :text="d.short" :term="term" /></span>
           </li>
         </ul>
       </section>
@@ -73,8 +82,8 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
         <h2 id="h-r-doc" class="res__title">Врачи</h2>
         <ul class="res__list">
           <li v-for="d in found.doctors" :key="d.slug">
-            <NuxtLink :to="`/doctors/${d.slug}`">{{ d.name }}</NuxtLink>
-            <span class="text-muted text-small"> – {{ d.position }}</span>
+            <NuxtLink :to="`/doctors/${d.slug}`"><HighlightText :text="d.name" :term="term" /></NuxtLink>
+            <span class="text-muted text-small"> – <HighlightText :text="d.position" :term="term" /></span>
           </li>
         </ul>
       </section>
@@ -82,7 +91,7 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
         <h2 id="h-r-srv" class="res__title">Услуги</h2>
         <ul class="res__list">
           <li v-for="s in found.services" :key="s.code">
-            <NuxtLink :to="`/services/${s.direction}`">{{ s.title }}</NuxtLink>
+            <NuxtLink :to="`/services/${s.direction}`"><HighlightText :text="s.title" :term="term" /></NuxtLink>
             <span class="text-muted text-small"> – {{ dirTitle(s.direction) }}, {{ formatPrice(s.price) }}</span>
           </li>
         </ul>
@@ -114,6 +123,13 @@ const dirTitle = (slug: string) => directions.value?.find((d) => d.slug === slug
     left: 0.875rem;
     color: var(--c-muted);
     transform: translateY(-50%);
+  }
+
+  &__popular {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    align-items: center;
   }
 }
 

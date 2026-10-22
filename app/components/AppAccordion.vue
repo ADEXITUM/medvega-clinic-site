@@ -65,7 +65,11 @@ const id = useId()
     font-weight: 400;
     font-size: var(--fs-sm);
     color: var(--c-muted);
-    white-space: nowrap;
+    text-align: right;
+
+    @include up(md) {
+      white-space: nowrap;
+    }
   }
 
   &__chevron {

@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { CalendarDays, Clock, User } from '@lucide/vue'
+import { CalendarDays, CalendarPlus, Clock, RefreshCw, User } from '@lucide/vue'
 import type { Booking } from '~/types'
-import { cancelBooking, getBookings, getDirections, getDoctors, toIsoDate } from '~/services/api'
+import { cancelBooking, getBookings, getClinic, getDirections, getDoctors, toIsoDate } from '~/services/api'
 
 usePageSeo({ title: 'Мои записи', description: 'Записи к врачам клиники «МедВега», сделанные в этом браузере. Отмена записи онлайн.' })
 useSeoMeta({ robots: 'noindex, follow' })
 
-const [{ data: directions }, { data: doctors }] = await Promise.all([
+const [{ data: directions }, { data: doctors }, { data: clinic }] = await Promise.all([
   useAsyncData('directions', getDirections),
   useAsyncData('doctors', () => getDoctors()),
+  useAsyncData('clinic', getClinic),
 ])
+
+function addToCalendar(b: Booking) {
+  const title = `Приём: ${dirTitle(b.direction)}, ${docName(b.doctor)}`
+  downloadFile(`zapis-${b.id}.ics`, bookingIcs(b, title, `${clinic.value?.name}, ${clinic.value?.address.full}`))
+}
 
 // Записи хранятся в localStorage, поэтому читаются только в браузере
 const bookings = ref<Booking[] | null>(null)
@@ -61,7 +67,7 @@ async function confirmCancel() {
       Здесь показаны записи, сделанные на сайте в этом браузере. Они хранятся только на вашем устройстве.
     </p>
 
-    <p v-if="!bookings" class="text-muted">Загружаем записи…</p>
+    <SkeletonBlock v-if="!bookings" :lines="4" height="1.25rem" />
 
     <template v-else>
       <section aria-labelledby="h-upcoming">
@@ -76,9 +82,21 @@ async function confirmCancel() {
                 <li><Clock :size="18" aria-hidden="true" /> {{ b.time }}</li>
               </ul>
               <p class="text-muted text-small">Запись № {{ b.id }} на имя {{ b.name }}</p>
-              <button type="button" class="btn btn--secondary btn--sm" data-testid="cancel-booking" @click="toCancel = b">
-                Отменить запись
-              </button>
+              <div class="visit__actions">
+                <NuxtLink
+                  :to="{ path: '/booking', query: { direction: b.direction, doctor: b.doctor, reschedule: b.id } }"
+                  class="btn btn--secondary btn--sm"
+                  data-testid="reschedule-booking"
+                >
+                  <RefreshCw :size="16" aria-hidden="true" /> Перенести
+                </NuxtLink>
+                <button type="button" class="btn btn--text btn--sm" @click="addToCalendar(b)">
+                  <CalendarPlus :size="16" aria-hidden="true" /> В календарь
+                </button>
+                <button type="button" class="btn btn--text btn--sm" data-testid="cancel-booking" @click="toCancel = b">
+                  Отменить
+                </button>
+              </div>
             </article>
           </li>
         </ul>
@@ -148,6 +166,12 @@ async function confirmCancel() {
     svg {
       color: var(--c-primary);
     }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-2);
   }
 }
 

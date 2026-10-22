@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Award, Baby, CalendarClock, GraduationCap } from '@lucide/vue'
-import { getDirection, getDoctor, getNearestSlots, getServices } from '~/services/api'
+import { Award, Baby, CalendarClock, GraduationCap, Star } from '@lucide/vue'
+import { getDirection, getDoctor, getNearestSlots, getReviews, getServices } from '~/services/api'
 
 const route = useRoute()
 const slug = String(route.params.slug)
@@ -13,6 +13,17 @@ const [{ data: direction }, { data: allServices }] = await Promise.all([
   useAsyncData(`services-${doctor.value.direction}`, () => getServices(doctor.value!.direction)),
 ])
 const services = computed(() => (allServices.value ?? []).filter((s) => doctor.value!.services.includes(s.code)))
+
+// отзывы о враче и его рейтинг
+const { data: allReviews } = await useAsyncData('reviews', getReviews)
+const reviews = computed(() => (allReviews.value ?? []).filter((r) => r.doctor === slug && !r.pending))
+const rating = computed(() =>
+  reviews.value.length ? reviews.value.reduce((s, r) => s + r.rating, 0) / reviews.value.length : null,
+)
+const bookingLink = (extra: Record<string, string> = {}) => ({
+  path: '/booking',
+  query: { direction: doctor.value!.direction, doctor: slug, ...extra },
+})
 
 // Свободные окна зависят от текущей даты, поэтому считаются в браузере
 const slots = ref<{ date: string; time: string }[] | null>(null)
@@ -50,8 +61,13 @@ useJsonLd('physician', () => ({
           class="btn btn--primary btn--block"
           data-testid="doctor-book"
         >
-          Записаться на приём
+          Записаться
         </NuxtLink>
+        <p v-if="rating" class="doc__rating">
+          <Star :size="18" aria-hidden="true" class="doc__star" />
+          <strong>{{ formatRating(rating) }}</strong>&nbsp;из 5
+          <a href="#h-reviews">{{ reviews.length }} {{ plural(reviews.length, ['отзыв', 'отзыва', 'отзывов']) }}</a>
+        </p>
       </div>
 
       <div class="doc__main">
@@ -69,7 +85,7 @@ useJsonLd('physician', () => ({
 
         <section class="block" aria-labelledby="h-slots">
           <h2 id="h-slots" class="block__title"><CalendarClock :size="24" aria-hidden="true" /> Ближайшие свободные окна</h2>
-          <p v-if="!slots" class="text-muted">Загружаем расписание…</p>
+          <SkeletonBlock v-if="!slots" :chips="6" />
           <ul v-else-if="slots.length" class="slots" data-testid="nearest-slots">
             <li v-for="s in slots" :key="s.date + s.time">
               <NuxtLink
@@ -98,16 +114,32 @@ useJsonLd('physician', () => ({
                 <tr>
                   <th scope="col">Услуга</th>
                   <th scope="col" class="num">Цена</th>
+                  <th scope="col"><span class="visually-hidden">Запись</span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="s in services" :key="s.code">
                   <td>{{ s.title }}</td>
                   <td class="num">{{ formatPrice(s.price) }}</td>
+                  <td class="num">
+                    <NuxtLink :to="bookingLink()" class="btn btn--text btn--sm">
+                      Записаться<span class="visually-hidden">: {{ s.title }}</span>
+                    </NuxtLink>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section v-if="reviews.length" class="block" aria-labelledby="h-reviews">
+          <h2 id="h-reviews" class="block__title">Отзывы пациентов</h2>
+          <ul class="doc__reviews">
+            <li v-for="r in reviews" :key="r.id">
+              <ReviewCard :review="r" />
+            </li>
+          </ul>
+          <NuxtLink :to="{ path: '/reviews', query: { doctor: slug } }" class="btn btn--text">Все отзывы и форма нового отзыва</NuxtLink>
         </section>
       </div>
     </div>
@@ -155,6 +187,30 @@ useJsonLd('physician', () => ({
     svg {
       flex-shrink: 0;
       color: var(--c-primary);
+    }
+  }
+
+  &__rating {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-sm);
+  }
+
+  &__star {
+    color: #b45309;
+    fill: #f59e0b;
+  }
+
+  &__reviews {
+    display: grid;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+
+    @include up(lg) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

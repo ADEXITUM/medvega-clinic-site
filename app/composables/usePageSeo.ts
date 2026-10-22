@@ -61,3 +61,17 @@ export function clinicJsonLd(clinic: import('~/types').Clinic, abs: (p: string) 
     medicalSpecialty: ['PrimaryCare', 'Cardiovascular', 'Neurologic', 'Gynecologic', 'Urologic', 'Otolaryngologic', 'Optometric', 'Radiography'],
   }
 }
+
+/** FAQPage – вопросы и ответы на главной и на страницах направлений */
+export function faqJsonLd(items: import('~/types').Faq[]) {
+  if (!items.length) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((f) => ({
+      '@type': 'Question',
+      name: plain(f.q),
+      acceptedAnswer: { '@type': 'Answer', text: plain(f.a) },
+    })),
+  }
+}

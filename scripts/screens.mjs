@@ -48,9 +48,10 @@ async function shot(name, width, url, prepare, opts = {}) {
 
 for (const w of [1440, 768, 375]) {
   await shot('home', w, '/')
-  await shot('doctors', w, '/doctors')
+  await shot('doctors', w, '/doctors', (p) => p.getByText('Ближайшая запись').first().waitFor())
   await shot('doctor', w, '/doctors/smirnova-elena', (p) => p.getByTestId('nearest-slots').waitFor())
   await shot('booking-step1', w, '/booking')
+  await shot('booking-step2', w, '/booking?direction=kardiologiya', (p) => p.getByText('ближайшая запись').first().waitFor())
   await shot('booking-step3', w, '/booking?direction=kardiologiya&doctor=smirnova-elena', (p) => p.getByTestId('calendar').waitFor())
 }
 

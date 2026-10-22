@@ -9,7 +9,7 @@ test('ТК-6. Фильтр врачей по направлению и поис�
   await hydrated(page)
   await expect(page.getByTestId('doctor-card')).toHaveCount(16)
 
-  await page.getByTestId('doctor-direction').selectOption('kardiologiya')
+  await page.getByTestId('doctor-direction').locator('[data-value="kardiologiya"]').click()
   await expect(page).toHaveURL(/direction=kardiologiya/)
   await expect(page.getByTestId('doctor-card')).toHaveCount(2)
 
@@ -21,7 +21,7 @@ test('ТК-6. Фильтр врачей по направлению и поис�
   // ссылкой на отфильтрованный список можно поделиться
   await page.goto('/doctors?direction=lor')
   await expect(page.getByTestId('doctor-card')).toHaveCount(2)
-  await expect(page.getByTestId('doctor-direction')).toHaveValue('lor')
+  await expect(page.getByTestId('doctor-direction').locator('[data-value="lor"]')).toHaveAttribute('aria-pressed', 'true')
   expect(errors).toEqual([])
 })
 
@@ -140,6 +140,44 @@ test('ТК-18. Поиск по сайту находит врачей и усл�
   await expect(page.getByRole('link', { name: 'Кардиология' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Смирнова Елена Викторовна' })).toBeVisible()
   await expect(page).toHaveURL(/q=/)
+})
+
+test('ТК-19. Фильтр «Детский приём» и рейтинг в карточках врачей', async ({ page }) => {
+  await page.goto('/doctors')
+  await hydrated(page)
+  await page.getByTestId('doctor-kids').check()
+  await expect(page).toHaveURL(/kids=1/)
+  await expect(page.getByTestId('doctor-card')).toHaveCount(4)
+  await expect(page.getByTestId('doctor-card').first()).toContainText('Принимает детей')
+  await expect(page.getByTestId('doctor-card').first()).toContainText(/Приём от/)
+  await expect(page.getByTestId('doctor-next').first()).toContainText('Ближайшая запись')
+})
+
+test('ТК-20. Прайс: первая группа раскрыта, «Развернуть все» показывает все услуги', async ({ page }) => {
+  await page.goto('/prices')
+  await hydrated(page)
+  const rows = page.getByTestId('price-row')
+  await expect(rows.first()).toBeVisible()
+  await page.getByTestId('price-toggle-all').click()
+  await expect(page.locator('[data-testid="price-row"]:visible')).toHaveCount(42)
+})
+
+test('ТК-21. Карта на главной загружается только по нажатию', async ({ page }) => {
+  await page.goto('/')
+  await hydrated(page)
+  await expect(page.locator('iframe[src*="openstreetmap"]')).toHaveCount(0)
+  await page.getByTestId('map-show').click()
+  await expect(page.locator('iframe[src*="openstreetmap"]')).toHaveCount(1)
+})
+
+test('ТК-22. Панель «Позвонить / Записаться» на телефоне и её отсутствие в мастере записи', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'только для телефона')
+  await page.goto('/')
+  await hydrated(page)
+  await expect(page.getByTestId('action-bar')).toBeVisible()
+  await page.getByTestId('action-bar').getByRole('link', { name: 'Записаться' }).click()
+  await expect(page).toHaveURL(/\/booking/)
+  await expect(page.getByTestId('action-bar')).toHaveCount(0)
 })
 
 test('ТК-14. Несуществующий адрес показывает страницу 404 со ссылками', async ({ page }) => {

@@ -9,11 +9,14 @@ usePageSeo({
 
 const { data: clinic } = await useAsyncData('clinic', getClinic)
 
+// фотографии из фотобанка Pexels (источники – в docs/images.md)
 const rooms = [
-  { title: 'Зона ресепшен', hue: 188 },
-  { title: 'Кабинет УЗИ-диагностики', hue: 210 },
-  { title: 'Процедурный кабинет', hue: 150 },
-  { title: 'Детская зона ожидания', hue: 30 },
+  { name: 'reception', title: 'Зона ожидания и регистратура' },
+  { name: 'ultrasound', title: 'Кабинет ультразвуковой диагностики' },
+  { name: 'cardio', title: 'Кабинет функциональной диагностики' },
+  { name: 'ophthalmology', title: 'Офтальмологический кабинет' },
+  { name: 'kids', title: 'Детский приём' },
+  { name: 'lab', title: 'Лаборатория' },
 ]
 </script>
 
@@ -45,24 +48,27 @@ const rooms = [
     </section>
 
     <section class="block" aria-labelledby="h-photo">
-      <h2 id="h-photo" class="block__title">Фотографии клиники</h2>
-      <p class="text-muted text-small photo-note">
-        Вместо фотографий использованы иллюстрации (учебный проект), источники изображений перечислены в docs/images.md.
-      </p>
-      <ul class="grid grid--4">
-        <li v-for="r in rooms" :key="r.title">
+      <h2 id="h-photo" class="block__title">Клиника и оборудование</h2>
+      <ul class="grid grid--3">
+        <li v-for="r in rooms" :key="r.name">
           <figure class="photo">
-            <svg class="illustration photo__img" viewBox="0 0 320 200" role="img" :aria-label="`Иллюстрация: ${r.title}`">
-              <rect width="320" height="200" rx="16" :fill="`hsl(${r.hue} 55% 92%)`" />
-              <rect x="20" y="120" width="280" height="60" rx="10" :fill="`hsl(${r.hue} 45% 80%)`" />
-              <rect x="40" y="40" width="90" height="70" rx="10" fill="#fff" />
-              <rect x="150" y="40" width="130" height="70" rx="10" fill="#fff" />
-              <circle cx="85" cy="75" r="18" :fill="`hsl(${r.hue} 50% 70%)`" />
-              <rect x="170" y="60" width="90" height="10" rx="5" :fill="`hsl(${r.hue} 40% 75%)`" />
-              <rect x="170" y="80" width="60" height="10" rx="5" :fill="`hsl(${r.hue} 40% 75%)`" />
-            </svg>
+            <ClinicPhoto :name="r.name" :alt="r.title" sizes="(min-width: 1024px) 400px, (min-width: 768px) 50vw, 100vw" class="photo__img" />
             <figcaption class="photo__caption">{{ r.title }}</figcaption>
           </figure>
+        </li>
+      </ul>
+      <p class="text-muted text-small photo-note">Фото: фотобанк Pexels.</p>
+    </section>
+
+    <section class="block" aria-labelledby="h-jobs">
+      <h2 id="h-jobs" class="block__title">Вакансии</h2>
+      <ul class="grid grid--3">
+        <li v-for="v in clinic.vacancies" :key="v.title" class="card job">
+          <h3 class="job__title">{{ v.title }}</h3>
+          <p class="text-muted">{{ v.text }}</p>
+          <a :href="`mailto:${clinic.email}?subject=${encodeURIComponent('Вакансия: ' + v.title)}`" class="btn btn--text btn--sm">
+            Отправить резюме
+          </a>
         </li>
       </ul>
     </section>
@@ -164,13 +170,25 @@ const rooms = [
 }
 
 .photo-note {
-  margin-bottom: var(--sp-4);
+  margin-top: var(--sp-3);
+}
+
+.job {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  justify-items: start;
+  height: 100%;
+  padding: var(--sp-5);
+
+  &__title {
+    font-size: var(--fs-md);
+  }
 }
 
 .photo {
   &__img {
-    width: 100%;
-    height: auto;
+    border-radius: var(--r-lg);
   }
 
   &__caption {

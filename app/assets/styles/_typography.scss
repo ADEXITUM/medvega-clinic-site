@@ -1,5 +1,27 @@
 @use 'mixins' as *;
 
+// Запасной шрифт с метриками, подогнанными под Manrope (ширина измерена на русском тексте, вертикальные метрики –
+// из таблицы hhea шрифта). Пока Manrope загружается, текст переносится так же, и вёрстка не «прыгает» (CLS).
+@font-face {
+  font-family: 'Manrope Fallback';
+  font-weight: 400;
+  src: local('Arial'), local('Liberation Sans'), local('Helvetica');
+  size-adjust: 101%;
+  ascent-override: 105.5%;
+  descent-override: 29.7%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Manrope Fallback';
+  font-weight: 700;
+  src: local('Arial Bold'), local('Arial'), local('Liberation Sans'), local('Helvetica');
+  size-adjust: 99%;
+  ascent-override: 107.7%;
+  descent-override: 30.3%;
+  line-gap-override: 0%;
+}
+
 body {
   font-family: var(--font-base);
   font-size: var(--fs-base);

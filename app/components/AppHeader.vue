@@ -9,6 +9,9 @@ const menuOpen = ref(false)
 const panel = ref<HTMLElement | null>(null)
 const burger = ref<HTMLButtonElement | null>(null)
 const route = useRoute()
+// тень под шапкой появляется, когда страница прокручена
+const scrolled = ref(false)
+const onScroll = () => (scrolled.value = window.scrollY > 8)
 
 function close(returnFocus = true) {
   if (!menuOpen.value) return
@@ -46,17 +49,20 @@ onMounted(() => {
   document.addEventListener('keydown', onKey)
   document.addEventListener('click', onOutside)
   window.addEventListener('resize', onResize)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  onScroll()
 })
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKey)
   document.removeEventListener('click', onOutside)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('scroll', onScroll)
   document.body.style.overflow = ''
 })
 </script>
 
 <template>
-  <header class="header">
+  <header :class="['header', { 'header--scrolled': scrolled }]">
     <div class="container header__inner">
       <AppLogo />
 
@@ -130,6 +136,13 @@ onBeforeUnmount(() => {
           <a v-if="clinic" :href="`tel:${clinic.phoneHref}`" class="btn btn--secondary btn--block">
             <Phone :size="20" aria-hidden="true" /> {{ clinic.phone }}
           </a>
+          <button type="button" class="btn btn--text btn--block" @click="toggle">
+            <Eye :size="20" aria-hidden="true" />
+            {{ settings.enabled ? 'Обычная версия сайта' : 'Версия для слабовидящих' }}
+          </button>
+          <p v-if="clinic" class="mobile-menu__hours">
+            <template v-for="(h, i) in clinic.hours" :key="h.days">{{ i ? ' · ' : '' }}{{ h.days }} {{ h.time }}</template>
+          </p>
         </div>
       </nav>
     </div>
@@ -143,6 +156,11 @@ onBeforeUnmount(() => {
   z-index: 50;
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
+  transition: box-shadow var(--transition);
+
+  &--scrolled {
+    box-shadow: var(--shadow-md);
+  }
 
   &__inner {
     display: flex;
@@ -173,10 +191,15 @@ onBeforeUnmount(() => {
     font-weight: 700;
     font-size: var(--fs-sm);
     color: var(--c-text);
+    white-space: nowrap;
     text-decoration: none;
     border-radius: var(--r-sm);
 
     @include up(xl) {
+      font-size: 0.9375rem;
+    }
+
+    @include up(xxl) {
       padding-inline: var(--sp-3);
       font-size: var(--fs-base);
     }
@@ -278,6 +301,12 @@ onBeforeUnmount(() => {
     display: grid;
     gap: var(--sp-3);
     margin-top: var(--sp-5);
+  }
+
+  &__hours {
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+    text-align: center;
   }
 }
 </style>

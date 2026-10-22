@@ -73,6 +73,51 @@ test('ТК-4. Форму нельзя отправить с неполным т�
   await expect(page.getByTestId('booking-done')).toHaveCount(0)
 })
 
+test('ТК-23. Перенос записи: новая запись создана, прежняя отменена', async ({ page }) => {
+  await walkToForm(page)
+  await page.getByLabel('Фамилия, имя, отчество').fill('Петров Пётр Петрович')
+  await page.getByLabel('Телефон').pressSequentially('9241234567')
+  await page.getByTestId('consent').check()
+  await page.getByTestId('booking-submit').click()
+  await expect(page.getByTestId('booking-done')).toBeVisible({ timeout: 5000 })
+
+  await page.goto('/my')
+  await page.getByTestId('reschedule-booking').click()
+  await expect(page.getByTestId('reschedule-note')).toBeVisible()
+  await expect(page.getByTestId('booking-step')).toHaveAttribute('data-step', '3')
+  await page.locator('[data-testid="calendar"] button:not([disabled])').last().click()
+  await page.locator('[data-testid="slots"] button:not([disabled])').last().click()
+  await page.getByLabel('Фамилия, имя, отчество').fill('Петров Пётр Петрович')
+  await page.getByLabel('Телефон').pressSequentially('9241234567')
+  await page.getByTestId('consent').check()
+  await page.getByTestId('booking-submit').click()
+  await expect(page.getByTestId('booking-done')).toContainText('прежняя запись отменена', { timeout: 5000 })
+
+  await page.goto('/my')
+  await expect(page.getByTestId('my-booking')).toHaveCount(1)
+  await expect(page.getByTestId('my-past')).toContainText('Отменена')
+})
+
+test('ТК-24. Черновик записи сохраняется после перезагрузки страницы', async ({ page }) => {
+  await walkToForm(page)
+  await page.getByLabel('Фамилия, имя, отчество').fill('Сидорова Мария')
+  await page.reload()
+  await expect(page.getByTestId('booking-step')).toHaveAttribute('data-step', '5')
+  await expect(page.getByLabel('Фамилия, имя, отчество')).toHaveValue('Сидорова Мария')
+  await expect(page.getByTestId('consent')).not.toBeChecked()
+})
+
+test('ТК-25. Запись можно добавить в календарь (файл .ics)', async ({ page }) => {
+  await walkToForm(page)
+  await page.getByLabel('Фамилия, имя, отчество').fill('Петров Пётр Петрович')
+  await page.getByLabel('Телефон').pressSequentially('9241234567')
+  await page.getByTestId('consent').check()
+  await page.getByTestId('booking-submit').click()
+  await expect(page.getByTestId('booking-done')).toBeVisible({ timeout: 5000 })
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('add-calendar').click()])
+  expect(download.suggestedFilename()).toMatch(/\.ics$/)
+})
+
 test('ТК-5. Кнопка «Записаться» на странице врача открывает мастер с выбранными шагами', async ({ page }) => {
   await page.goto('/doctors/smirnova-elena')
   await page.getByTestId('doctor-book').click()

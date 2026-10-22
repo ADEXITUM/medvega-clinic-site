@@ -1,10 +1,14 @@
 <script setup lang="ts">
 const { load } = useA11y()
 onMounted(load)
+
+// на телефоне внизу закреплена панель действий (кроме мастера записи) – под неё оставляется место
+const route = useRoute()
+const withBar = computed(() => !route.path.startsWith('/booking'))
 </script>
 
 <template>
-  <div class="layout">
+  <div :class="['layout', { 'layout--with-bar': withBar }]">
     <a class="skip-link" href="#main">Перейти к содержимому</a>
     <AppHeader />
     <A11yPanel />
@@ -12,6 +16,8 @@ onMounted(load)
       <slot />
     </main>
     <AppFooter />
+    <MobileActionBar />
+    <BackToTop />
     <CallbackModal />
     <CookieBanner />
     <AppToasts />
@@ -23,6 +29,12 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  &--with-bar {
+    @include down(lg) {
+      padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    }
+  }
 
   &__main {
     flex: 1;
